@@ -16,16 +16,13 @@ logging.getLogger('fbprophet').setLevel(logging.WARNING)
 
 
 test = pd.read_csv("test2.csv")
-# submission = pd.read_csv("submission_1002.csv")
+submission = pd.read_csv("submission_1002.csv")
 # submission = pd.read_csv("submission_test.csv") # 24h 인덱스만
-submission = pd.read_csv("submission_test2.csv") # month 인덱스만
+# submission = pd.read_csv("submission_test2.csv") # month 인덱스만
 
 # Time을 datetime의 형태로 변환
 test['Time'] = pd.to_datetime(test['Time']) 
-# test['floor'] = 0.000000000
 test = test.set_index('Time')
-# print(test.head)
-# print(test.describe)
 
 
 ##  패널 데이터의 형태로 정리
@@ -49,7 +46,6 @@ new_df=new_df.set_index('time') # time을 인덱스로 저장합니다.
 
 ## prophet 모델링
 
-count = 0
 agg={}
 for key in new_df['place_id'].unique(): # 미터ID 200개의 리스트를 unique()함수를 통해 추출합니다.
     temp = new_df.loc[new_df['place_id']==key] # 미터ID 하나를 할당합니다.
@@ -57,11 +53,6 @@ for key in new_df['place_id'].unique(): # 미터ID 200개의 리스트를 unique
     temp_1d=temp.resample('D').sum() # 1일 단위로 정리합니다.
 
 
-# print("\n\n[DEBUG1-1]temp\n", temp, end="\n\n")
-# print("\n\n[DEBUG1-2]temp_1h\n", temp_1h, end="\n\n")
-# print("\n\n[DEBUG1-3]temp_1d\n", temp_1d, end="\n\n")
-
-    
     temp_1h['ds'] = temp_1h.index
     temp_1h = pd.DataFrame(temp_1h, columns=["ds","target"])        # 순서변경
     temp_1h = temp_1h.rename(columns={"ds":"ds", "target":"y"})     # 이름 변경
@@ -71,11 +62,6 @@ for key in new_df['place_id'].unique(): # 미터ID 200개의 리스트를 unique
     temp_1d = pd.DataFrame(temp_1d, columns=["ds", "target"])
     temp_1d = temp_1d.rename(columns={"ds":"ds", "target":"y"})
     # print("\n\n[DEBUG1-3]process temp_1d\n", temp_1d, end="\n\n")
-
-
-    '''
-    # if count > 3:
-    #     break
 
 
     # 시간별 예측
@@ -113,11 +99,10 @@ for key in new_df['place_id'].unique(): # 미터ID 200개의 리스트를 unique
 
     cntEnd = len(test_1d)
     cntStart = cntEnd - 10
-    # print("[test list check]\n", test_1d[cntStart:cntEnd], end="\n\n")
 
     for i in range(10):
         a['X2018_7_'+str(i+1)+'_d'] = [test_1d[cntStart+i]]
-    '''
+
     
     
     # 월별 예측
@@ -126,11 +111,8 @@ for key in new_df['place_id'].unique(): # 미터ID 200개의 리스트를 unique
 
     future_1m = model_1m.make_future_dataframe(periods=153)
     forecast_1m = model_1m.predict(future_1m)
-    # print("\n\n[yhat(1m)]\n", forecast_1m[['ds', 'yhat']].tail(5), end="\n\n")
 
     test_1m = forecast_1m.yhat.tolist()
-    a = pd.DataFrame()
-
 
     print("\n[test_1m check] (7m)\n", [np.sum(test_1m[0:31])], end="\n")
     print("\n[test_1m check] (8m)\n", [np.sum(test_1m[31:62])], end="\n")
@@ -146,19 +128,18 @@ for key in new_df['place_id'].unique(): # 미터ID 200개의 리스트를 unique
     a['X2018_11_m'] = [np.sum(test_1m[123:153])]
 
 
-    
 
-    count += 1
     a['meter_id'] = key 
     agg[key] = a[submission.columns.tolist()]
-    print("\n\n" + str(count) + " >> " + key, end="\n\n")
-# a = pd.DataFrame()
-# pd.DataFrame(a).to_csv("./testprophet.csv", index=False)
+    print(key)
 
 
-# output
+
+
+## output
+
 output1 = pd.concat(agg, ignore_index=False)
 output2 = output1.reset_index().drop(['level_0','level_1'], axis=1)
 output2['id'] = output2['meter_id'].str.replace('X','').astype(int)
 output2 =  output2.sort_values(by='id', ascending=True).drop(['id'], axis=1).reset_index(drop=True)
-output2.to_csv('sub_baseline_month.csv', index=False)
+output2.to_csv('sub_baseline.csv', index=False)
